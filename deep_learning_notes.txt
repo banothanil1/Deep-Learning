@@ -121,3 +121,289 @@ Non-linearly separable:
 4. Write the formula for Z. What does the bias do?
 5. How do step and sigmoid activations differ?
 6. Why can't a single perceptron solve non-linearly separable problems?
+
+1. ANN INTUITION
+------------------------------------------------------------------
+An Artificial Neural Network is a stack of simple units (neurons)
+that learns a mapping from inputs to outputs by adjusting its
+parameters.
+
+Single neuron:
+  z = w1*x1 + w2*x2 + ... + wn*xn + b
+  a = f(z)    (f = activation function)
+
+  - Weights (w): control how much each input matters.
+  - Bias (b): shifts the activation, like an intercept.
+  - Activation f(z): adds non-linearity. Without it, many layers
+    collapse into one linear function.
+
+Structure:
+  - Input layer   : takes the features.
+  - Hidden layers : learn intermediate representations (more layers
+                    = more abstract features).
+  - Output layer  : gives the prediction.
+
+Common activation functions:
+  Sigmoid : 1 / (1 + e^-z)          | derivative: a(1 - a)
+            Use: binary output
+  Tanh    : (e^z - e^-z)/(e^z + e^-z) | derivative: 1 - a^2
+            Use: hidden layers (older)
+  ReLU    : max(0, z)               | derivative: 1 if z>0 else 0
+            Use: default for hidden layers
+  Softmax : e^zi / sum(e^zj)
+            Use: multi-class output
+
+
+2. HOW LEARNING HAPPENS
+------------------------------------------------------------------
+Learning = finding the weights and biases that minimize the loss.
+
+Steps:
+  1. Forward propagation : inputs flow through layers to give y_hat.
+  2. Loss calculation    : measure error between y_hat and y.
+  3. Backpropagation     : compute gradient of loss w.r.t. every weight.
+  4. Weight updation     : move weights in the direction that reduces loss.
+  5. Repeat for many epochs.
+
+Loss functions:
+  - Regression (MSE)       : L = (1/n) * sum( (y - y_hat)^2 )
+  - Binary classification  : L = -[ y*log(y_hat) + (1-y)*log(1-y_hat) ]
+  - Multi-class (CCE)      : L = -sum( yi * log(y_hat_i) )
+
+  Loss = error on one sample.
+  Cost = average loss over the whole dataset.
+
+1. THE DIFFERENCE
+------------------------------------------------------------------
+  Forward pass : data travels input layer -> hidden -> output layer
+                 (gives the prediction)
+
+  Backward pass: error travels output layer -> hidden -> input layer
+                 (gives the gradients)
+
+  Iteration    : one batch does forward + loss + backward + ONE
+                 weight update
+
+  Epoch        : all batches of the dataset done once
+                 (many iterations)
+
+
+2. EXAMPLE
+------------------------------------------------------------------
+  Dataset = 1000 samples, batch size = 100
+
+  Iteration 1  : batch 1 (samples 1-100)     -> forward, backward, update
+  Iteration 2  : batch 2 (samples 101-200)   -> forward, backward, update
+  Iteration 3  : batch 3 (samples 201-300)   -> forward, backward, update
+  ...
+  Iteration 10 : batch 10 (samples 901-1000) -> forward, backward, update
+
+  After these 10 iterations, all 1000 samples have been used once.
+  That is ONE EPOCH.
+
+  Epoch 1 -> 10 iterations -> 10 weight updates
+  Epoch 2 -> the data is shuffled and the same 10 iterations repeat
+  ...
+
+
+3. VISUAL
+------------------------------------------------------------------
+  EPOCH 1
+  +-----------------------------------------------------------+
+  | batch 1: input -> output -> loss -> backprop -> update    |
+  | batch 2: input -> output -> loss -> backprop -> update    |
+  | batch 3: input -> output -> loss -> backprop -> update    |
+  | ...                                                       |
+  | batch 10: input -> output -> loss -> backprop -> update   |
+  +-----------------------------------------------------------+
+  EPOCH 2
+  +-----------------------------------------------------------+
+  | (same again, so the weights keep improving)               |
+  +-----------------------------------------------------------+
+
+
+4. SPECIAL CASE
+------------------------------------------------------------------
+  If batch size = whole dataset (Batch GD), then one iteration
+  covers all the data, so 1 iteration = 1 epoch.
+  Only in that case does "one forward pass + one update" equal
+  one epoch.
+
+3. BACKPROPAGATION
+------------------------------------------------------------------
+Backprop = chain rule of calculus applied layer by layer, from the
+output back to the input. It tells us how much each weight
+contributed to the error.
+
+Chain rule for a weight in the last layer:
+  dL/dw = dL/da * da/dz * dz/dw
+
+  - dL/da : how the loss changes with the neuron's output
+  - da/dz : derivative of the activation function
+  - dz/dw : the input feeding that weight (z = wx + b, so this is x)
+
+For a deeper network (weight w1 in layer 1 of a 2-layer net):
+  dL/dw1 = dL/dy_hat * dy_hat/dz2 * dz2/da1 * da1/dz1 * dz1/dw1
+
+The gradient of an earlier layer reuses gradients already computed
+for later layers, which is why backprop is efficient. Errors are
+propagated backward through the same weights used in the forward pass.
+
+Vanishing and exploding gradients:
+  Many derivatives get multiplied together.
+  - If derivatives < 1 (sigmoid/tanh saturate), gradients shrink
+    toward 0 in early layers -> VANISHING GRADIENT (early layers
+    stop learning).
+  - If derivatives > 1, gradients blow up -> EXPLODING GRADIENT
+    (unstable training).
+
+  Fixes: ReLU / Leaky ReLU, proper weight initialization
+  (Xavier for tanh/sigmoid, He for ReLU), batch normalization,
+  gradient clipping, residual connections.
+
+
+4. WEIGHT UPDATION (GRADIENT DESCENT)
+------------------------------------------------------------------
+Update rule:
+  w_new = w_old - lr * dL/dw
+  b_new = b_old - lr * dL/db
+
+  - lr (learning rate, eta) = step size.
+  - The gradient points toward steepest INCREASE of loss, so we
+    move in the opposite direction.
+
+Effect of learning rate:
+  - Too small : slow convergence, may get stuck.
+  - Too large : overshoots, oscillates, or diverges.
+  - Just right: smooth convergence to a minimum.
+
+Gradient descent variants:
+  Batch GD
+    Data per update : whole dataset
+    Pros : stable, smooth
+    Cons : slow, memory heavy
+
+  Stochastic GD (SGD)
+    Data per update : 1 sample
+    Pros : fast updates, can escape local minima
+    Cons : noisy
+
+  Mini-batch GD
+    Data per update : n samples (e.g. 32, 64)
+    Pros : best balance, GPU friendly
+    Cons : needs batch size tuning
+
+Optimizers (improvements over plain GD):
+  - Momentum : adds a velocity term, smooths updates.
+  - AdaGrad  : adaptive learning rate per parameter (decays too
+               aggressively).
+  - RMSprop  : fixes AdaGrad using moving average of squared gradients.
+  - Adam     : Momentum + RMSprop. Usual default choice.
+
+
+5. WORKED EXAMPLE (SINGLE NEURON)
+------------------------------------------------------------------
+Given: x = 0.5, y = 1, w = 0.4, b = 0, lr = 0.1
+       sigmoid activation, loss L = 0.5 * (y - a)^2
+
+Forward pass:
+  z = 0.4*0.5 + 0 = 0.2
+  a = sigmoid(0.2) = 0.5498
+  L = 0.5 * (1 - 0.5498)^2 = 0.1013
+
+Backward pass: 
+  dL/da = -(y - a)       = -0.4502
+  da/dz = a(1 - a)       = 0.5498 * 0.4502 = 0.2475
+  dz/dw = x              = 0.5
+  dL/dw = -0.4502 * 0.2475 * 0.5 = -0.0557
+  dL/db = -0.4502 * 0.2475 * 1   = -0.1114
+
+Update:
+  w_new = 0.4 - 0.1 * (-0.0557) = 0.4056
+  b_new = 0   - 0.1 * (-0.1114) = 0.0111
+
+The weight increased slightly, pushing the output closer to the
+target of 1. Repeating this over many iterations drives the loss down.
+
+
+6. QUICK REVISION SUMMARY
+------------------------------------------------------------------
+- ANN = layers of neurons computing f( sum(w*x) + b ).
+- Learning = minimizing loss by tuning weights and biases.
+- Forward prop gives the prediction.
+- Backprop gives the gradients using the chain rule.
+- Weight update: w = w - lr * dL/dw
+- Watch out for: vanishing/exploding gradients, bad learning rate,
+  overfitting (use dropout, regularization, early stopping).
+- Training loop: forward -> loss -> backward -> update -> repeat.
+
+FORWARD AND BACKWARD FLOW
+------------------------------------------------------------------
+  FORWARD PROPAGATION  (compute prediction)
+
+   x ---> [W1,b1] ---> z1 ---> a1 ---> [W2,b2] ---> z2 ---> y_hat ---> LOSS
+                                                                         |
+  BACKWARD PROPAGATION (compute gradients via chain rule)                |
+                                                                         v
+   dW1 <--- dz1 <--- da1 <--- dW2 <--- dz2 <--- dL/dy_hat <-------------+
+
+  Then update:  W = W - lr * dW   for every layer.
+
+
+G7. TRAINING LOOP
+------------------------------------------------------------------
+       +--------------------------------------------+
+       |                                            |
+       v                                            |
+  [ Forward pass ] --> [ Compute loss ] --> [ Backprop ]
+                                                |
+                                                v
+                                       [ Update weights ]
+                                                |
+                                                v
+                          repeat for every batch, every epoch
+                                                |
+                                                v
+                                   stop when loss stops improving
+
+
+G8. GRADIENT DESCENT ON A LOSS CURVE
+------------------------------------------------------------------
+  Loss
+   |
+   |  *                                    *
+   |   *                                  *
+   |    *                               *
+   |     *  (start)                    *
+   |      S                          *
+   |       \                       *
+   |        \                    *
+   |         v                 *
+   |          S              *
+   |           \           *
+   |            v        *
+   |             S     *
+   |              \  *
+   |               G  <-- minimum (gradient = 0)
+   +---------------------------------------------> weight w
+
+  S = successive steps. Steps shrink near the minimum
+  because the gradient becomes smaller.
+
+  Slope negative (left of min)  -> w increases
+  Slope positive (right of min) -> w decreases
+  w_new = w_old - lr * slope
+
+
+G9. EFFECT OF LEARNING RATE
+------------------------------------------------------------------
+  (a) TOO SMALL                (b) JUST RIGHT            (c) TOO LARGE
+  Loss                         Loss                      Loss
+   |*                           |*                        |*       *
+   | *                          | *                       |  *   *
+   |  *                         |   *                     |   * *   (bouncing
+   |   *                        |     *                   |    *     or
+   |    *                       |        *                |          diverging)
+   |     *                      |            * * * *      |
+   |      *  slow...            |                 ---     |
+   +---------------> epochs     +--------------> epochs   +-----------> epochs
