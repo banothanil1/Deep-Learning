@@ -1,0 +1,123 @@
+1. WHAT IS DEEP LEARNING?
+
+- AI is the biggest circle. ML sits inside AI, and Deep Learning sits inside ML.
+- Deep Learning means multi-layered neural networks.
+- Goal: mimic the human brain.
+
+Types of networks:
+- ANN (Artificial Neural Network)
+  Input: tabular data
+  Used for: Classification, Regression
+- CNN (Convolutional Neural Network)
+  Input: images, video frames
+  Used for: Computer Vision, Object Detection
+- RNN (Recurrent Neural Network)
+  Input: text, time series
+  Used for: NLP, Time Series
+
+CNN topics ahead: RCNN, Masked RCNN, YOLO (v5, v6, v7)
+RNN/NLP topics ahead: Word Embedding, LSTM RNN, GRU RNN, Bidirectional LSTM RNN, Encoder-Decoder, Transformers, BERT
+Framework: TensorFlow, plus an end-to-end project
+
+
+2. WHY IS DEEP LEARNING BECOMING POPULAR?
+
+Timeline:
+- 2005: Social media platforms (Facebook, YouTube, WhatsApp, LinkedIn, Twitter) appear.
+- 2011-2012: Data (images, text, documents, videos) is generated exponentially, which creates Big Data.
+- Hadoop handles the unstructured data. Cloudera and Hortonworks emerge in 2011.
+
+Reasons:
+1. Hardware: GPU prices dropped (Nvidia), so training models became affordable.
+2. Huge data: Deep learning keeps improving as data grows, while traditional ML plateaus.
+3. Many domains: Medical, E-commerce, Retail, Marketing, and more.
+4. Open-source frameworks: This grew the community and led to more research.
+   - TensorFlow is from Google.
+   - PyTorch is from Facebook.
+
+Example: Netflix uses a deep learning recommendation system, which increases revenue.
+
+
+3. PERCEPTRON (ARTIFICIAL NEURON)
+
+- It is a single-layered neural network and a binary classifier.
+- Building blocks: input layer, hidden layer, weights, activation function.
+
+Step 1: Weighted sum
+Z = w1*x1 + w2*x2 + ... + wn*xn + b
+or Z = sum of (xi * wi) + b
+
+- x = inputs
+- w = weights (importance of each input)
+- b = bias (shifts the decision boundary)
+
+Step 2: Activation function
+y_hat = Act(Z)
+It transforms the output into 0 to 1 or -1 to 1.
+
+Example dataset (Pass/Fail):
+x1 (IQ)   x2 (Study hours)   Output
+95        3                  0
+110       4                  1
+100       5                  1
+
+Loss (error): the difference between actual and predicted output.
+Example: y = 1, y_hat = 0, so error = 1 - 0 = 1
+
+Activation functions:
+- Step function: threshold = 0
+  Output 1 if Z > 0, else 0
+- Sigmoid function: threshold = 0.5
+  Output 1 if Z > 0.5, else 0 (smooth curve between 0 and 1)
+
+Link with linear regression:
+- y = mx + c
+- y = b0 + b1*x1 + b2*x2 + ... + bn*xn
+
+The perceptron solves a linear problem, so a perceptron is a linear classifier.
+
+
+4. PERCEPTRON MODELS
+
+A. Single Layer Perceptron
+- A feed forward neural network (data flows only forward).
+- Flow: inputs -> Z = sum(xi*wi) + b -> Act(Z) with threshold -> y_hat (1 or 0)
+- Works only on linearly separable problems.
+
+B. Multi Layered Perceptron (ANN)
+Key concepts to learn:
+1. Forward propagation
+2. Backward propagation
+3. Loss functions
+4. Activation functions
+5. Optimizers
+
+Linearly separable:
+- One straight line separates the two classes.
+- Solved by a single layer perceptron.
+
+Non-linearly separable:
+- Classes are mixed, so no single line works.
+- Solved by a multi-layered neural network.
+
+
+5. QUICK REVISION
+
+- AI > ML > Deep Learning (each one sits inside the previous one)
+- ANN -> tabular, CNN -> images/video, RNN -> text/time series
+- Popularity comes from data, GPUs, many domains, and open-source frameworks.
+- TensorFlow = Google, PyTorch = Facebook
+- Z = sum(wi*xi) + b, then y_hat = Act(Z)
+- Step threshold is 0 and sigmoid threshold is 0.5.
+- A perceptron is a linear classifier, so it fails on non-linear data.
+- A multi-layer network (ANN) fixes this with forward and backward propagation, loss functions, activation functions, and optimizers.
+
+
+6. SELF-TEST QUESTIONS
+
+1. How are AI, ML, and Deep Learning related?
+2. Which network fits (a) a loan default table, (b) a chest X-ray, (c) a sentence?
+3. Give three reasons deep learning grew after 2011.
+4. Write the formula for Z. What does the bias do?
+5. How do step and sigmoid activations differ?
+6. Why can't a single perceptron solve non-linearly separable problems?
