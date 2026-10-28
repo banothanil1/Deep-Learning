@@ -564,11 +564,170 @@ values after each update, G is the global minimum.
   The vanishing case learns about 1000 times slower.
 
 
-10. QUICK REVISION
+TANH ACTIVATION FUNCTION: NOTES, GRAPH, ADVANTAGES, DISADVANTAGES
+==================================================================
+
+1. WHAT IS TANH
 ------------------------------------------------------------------
-  - Backprop multiplies one factor per layer (chain rule).
-  - Factors below 1 multiplied many times shrink exponentially.
-  - Early layers get gradient ~ 0, so w_new ~ w_old.
-  - Flat slope on the loss vs weight graph = tiny steps = stuck.
-  - Fixes: good initialization, batch normalization, residual
-    connections, LSTM/GRU for sequences.
+Tanh (hyperbolic tangent) is an activation function that squashes
+any input value into the range -1 to +1.
+
+  Formula:
+    tanh(z) = (e^z - e^-z) / (e^z + e^-z)
+
+  Relation to sigmoid:
+    tanh(z) = 2 * sigmoid(2z) - 1
+    (it is a scaled and shifted version of sigmoid)
+
+  Output range : (-1, +1)
+  tanh(0)      : 0
+  tanh(+large) : approaches +1
+  tanh(-large) : approaches -1
+
+
+2. GRAPH OF TANH
+------------------------------------------------------------------
+X-axis = input z, y-axis = output a = tanh(z)
+
+   a
+  +1.0 |                          . * * * * * * *   <- saturates at +1
+       |                     *
+  +0.5 |                 *
+       |              *
+   0.0 |- - - - - - * - - - - - - - -               <- passes through 0
+       |         *
+  -0.5 |      *
+       |  *
+  -1.0 |* * * * . .                                  <- saturates at -1
+       +----------+----------+----------> z
+      -4          0          4
+
+  - S-shaped curve, passes through the origin (0, 0).
+  - Steepest around z = 0.
+  - Flat on both ends (saturation).
+
+
+3. GRAPH OF THE DERIVATIVE
+------------------------------------------------------------------
+  Derivative:  tanh'(z) = 1 - tanh(z)^2 = 1 - a^2
+
+   tanh'(z)
+  1.0 |              *
+      |            *   *
+  0.8 |           *     *
+      |          *       *
+  0.5 |        *           *
+      |      *               *
+  0.2 |   *                     *
+  0.0 |* . . . . . . . . . . . . . *
+      +------------+------------+------> z
+     -4            0            4
+
+  - Maximum value = 1 at z = 0.
+  - Falls toward 0 when |z| is large (saturation).
+  - Compare: sigmoid derivative has a maximum of only 0.25, so
+    tanh gives stronger gradients than sigmoid.
+
+
+4. SAMPLE VALUES
+------------------------------------------------------------------
+    z       tanh(z)     tanh'(z) = 1 - a^2
+  -3.0      -0.9951       0.0099
+  -2.0      -0.9640       0.0707
+  -1.0      -0.7616       0.4200
+   0.0       0.0000       1.0000
+   1.0       0.7616       0.4200
+   2.0       0.9640       0.0707
+   3.0       0.9951       0.0099
+
+  At |z| = 3 the derivative is about 0.01, which shows saturation.
+
+
+5. NUMERIC EXAMPLE
+------------------------------------------------------------------
+  Inputs x1 = 0.5, x2 = -1.0, weights w1 = 0.8, w2 = 0.4, b = 0.1
+
+  z = 0.8*0.5 + 0.4*(-1.0) + 0.1 = 0.4 - 0.4 + 0.1 = 0.1
+  a = tanh(0.1) = 0.0997
+
+  Derivative used in backprop:
+  tanh'(z) = 1 - 0.0997^2 = 0.9901
+
+
+6. USE IN BACKPROPAGATION
+------------------------------------------------------------------
+  dL/dz = dL/da * (1 - a^2)
+
+  Chain rule for a weight:
+    dL/dw = dL/da * (1 - a^2) * x
+
+  Weight update:
+    w_new = w_old - lr * dL/dw
+
+
+7. WHERE TANH IS USED
+------------------------------------------------------------------
+  - Hidden layers of shallow networks.
+  - Recurrent networks (RNN, LSTM, GRU use tanh for the hidden
+    state and candidate values).
+  - Cases where outputs should be both positive and negative.
+
+
+8. ADVANTAGES
+------------------------------------------------------------------
+  1. Zero-centered output
+       Outputs range from -1 to +1 and are centered at 0. The next
+       layer receives inputs with both signs, so gradient updates
+       are more balanced and training converges faster than with
+       sigmoid.
+
+  2. Stronger gradients than sigmoid
+       Maximum derivative is 1 (sigmoid is only 0.25), so gradients
+       shrink less per layer.
+
+  3. Smooth and differentiable everywhere
+       No sharp corners, so gradient descent works smoothly.
+
+  4. Bounded output
+       Values stay within -1 to +1, which keeps activations stable
+       and prevents them from blowing up.
+
+  5. Handles negative values well
+       Strongly negative inputs map to strongly negative outputs
+       (sigmoid would map them to ~0).
+
+
+9. DISADVANTAGES
+------------------------------------------------------------------
+  1. Vanishing gradient problem
+       For large positive or negative z the curve is flat, the
+       derivative is ~ 0, and the gradient dies. In deep networks
+       the product of many small derivatives makes early layers
+       stop learning.
+
+  2. Saturation
+       Neurons stuck at +1 or -1 learn very slowly because their
+       slope is almost zero.
+
+  3. Computationally expensive
+       Needs exponentials (e^z and e^-z), which is slower than
+       simple functions.
+
+  4. Not ideal for very deep networks
+       Even with a derivative up to 1, it is usually below 1, so
+       the gradient still shrinks with depth.
+
+  5. Needs careful weight initialization
+       Poor initial weights push z into the flat regions
+       (Xavier initialization is recommended for tanh).
+
+
+10. TANH vs SIGMOID
+------------------------------------------------------------------
+                   Sigmoid              Tanh
+  Range            (0, 1)               (-1, 1)
+  Zero-centered    No                   Yes
+  Max derivative   0.25                 1.0
+  Saturates        Yes                  Yes
+  Vanishing grad   Yes (worse)          Yes (less severe)
+  Typical use      Binary output layer  Hidden layers, RNN/LSTM
