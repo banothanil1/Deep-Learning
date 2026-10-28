@@ -731,3 +731,201 @@ X-axis = input z, y-axis = output a = tanh(z)
   Saturates        Yes                  Yes
   Vanishing grad   Yes (worse)          Yes (less severe)
   Typical use      Binary output layer  Hidden layers, RNN/LSTM
+
+RELU ACTIVATION FUNCTION: NOTES, GRAPH, ADVANTAGES, DISADVANTAGES
+==================================================================
+
+1. WHAT IS RELU
+------------------------------------------------------------------
+ReLU (Rectified Linear Unit) is an activation function that passes
+positive values as they are and turns negative values into 0.
+
+  Formula:
+    ReLU(z) = max(0, z)
+
+  Piecewise:
+    ReLU(z) = z    if z > 0
+    ReLU(z) = 0    if z <= 0
+
+  Output range : [0, +infinity]
+  ReLU(-5) = 0,  ReLU(0) = 0,  ReLU(3) = 3
+
+
+2. GRAPH OF RELU
+------------------------------------------------------------------
+X-axis = input z, y-axis = output a = ReLU(z)
+
+   a
+   6 |                                     *
+   5 |                                  *
+   4 |                               *
+   3 |                            *
+   2 |                         *
+   1 |                      *
+   0 |* * * * * * * * * * *
+     +-------------------+---------------------> z
+    -6                   0                   6
+
+  - Flat at 0 for negative z.
+  - Straight line with slope 1 for positive z.
+  - Has a corner (kink) at z = 0.
+
+
+3. DERIVATIVE OF RELU
+------------------------------------------------------------------
+  ReLU'(z) = 1    if z > 0
+  ReLU'(z) = 0    if z < 0
+  (at z = 0 it is undefined; in practice it is taken as 0)
+
+   ReLU'(z)
+   1 |                     * * * * * * * * *
+     |                     |
+   0 |* * * * * * * * * * *
+     +-------------------+---------------------> z
+    -6                   0                   6
+
+  - A step function: either 1 or 0.
+  - Slope is exactly 1 for every positive z, so the gradient does
+    not shrink there, no matter how large z is.
+
+
+4. SAMPLE VALUES
+------------------------------------------------------------------
+    z       ReLU(z)     ReLU'(z)
+  -3.0       0            0
+  -1.0       0            0
+   0.0       0            0
+   0.5       0.5          1
+   2.0       2.0          1
+   5.0       5.0          1
+
+
+5. NUMERIC EXAMPLE
+------------------------------------------------------------------
+  Inputs x1 = 0.5, x2 = -1.0, weights w1 = 0.8, w2 = 0.4, b = 0.1
+
+  z = 0.8*0.5 + 0.4*(-1.0) + 0.1 = 0.1
+  a = ReLU(0.1) = 0.1
+
+  Another neuron with z = -0.7:
+  a = ReLU(-0.7) = 0     (neuron is "off")
+
+
+6. USE IN FORWARD AND BACKWARD PASS
+------------------------------------------------------------------
+  Forward  : z = w*x + b,  a = max(0, z)
+
+  Backward : dL/dz = dL/da * ReLU'(z)
+                   = dL/da   if z > 0
+                   = 0       if z < 0
+             dL/dw = dL/dz * x
+
+  So if the neuron is active (z > 0) the gradient passes through
+  unchanged. If it is inactive (z < 0) the gradient is blocked and
+  that weight gets no update from this sample.
+
+  Weight update (done by gradient descent, not by ReLU):
+    w_new = w_old - lr * dL/dw
+
+
+7. WHERE RELU IS USED
+------------------------------------------------------------------
+  - Default choice for hidden layers in most deep networks.
+  - Convolutional neural networks (CNNs).
+  - Deep feed-forward networks.
+  - Not used in the output layer for classification (use sigmoid or
+    softmax there); for regression the output layer is often linear.
+
+
+8. ADVANTAGES
+------------------------------------------------------------------
+  1. Reduces the vanishing gradient problem
+       The derivative is 1 for z > 0, so the gradient is not shrunk
+       layer after layer on the active side.
+
+  2. Fast to compute
+       Only a comparison with 0, no exponentials, so training is
+       quicker than with sigmoid or tanh.
+
+  3. Faster convergence
+       Networks with ReLU usually train much faster.
+
+  4. Sparse activation
+       Negative inputs give exactly 0, so many neurons are off at
+       a time. This makes the network efficient and can help
+       generalization.
+
+  5. Simple to implement
+       Easy formula and easy derivative.
+
+  6. Works well in deep networks
+       Allows training of much deeper models.
+
+
+9. DISADVANTAGES
+------------------------------------------------------------------
+  1. Dying ReLU problem
+       If a neuron's z is negative for all inputs, its output and
+       its gradient are both 0. The weights get no updates and the
+       neuron stays dead permanently. This can be caused by a large
+       learning rate or a big negative bias.
+
+  2. Not zero-centered
+       Outputs are always >= 0, which can make gradient updates
+       less balanced.
+
+  3. Unbounded output
+       Positive outputs can grow very large, which can lead to
+       exploding activations or gradients.
+
+  4. Not differentiable at z = 0
+       Handled in practice by assigning the derivative 0 (or 1) at
+       that point.
+
+  5. Ignores negative information
+       All negative inputs become 0, so that information is lost.
+
+
+10. DYING RELU ILLUSTRATION
+------------------------------------------------------------------
+  Neuron with z = -2 for every input:
+
+    a = ReLU(-2) = 0
+    ReLU'(-2) = 0
+    dL/dw = dL/da * 0 * x = 0
+    w_new = w_old - lr * 0 = w_old
+
+  The weight never changes, so the neuron never recovers.
+
+  Fixes: smaller learning rate, He initialization, small positive
+  bias, or use Leaky ReLU.
+
+
+11. VARIANT THAT FIXES DYING RELU: LEAKY RELU
+------------------------------------------------------------------
+  Leaky ReLU(z) = z          if z > 0
+                  0.01 * z   if z <= 0
+
+   a
+   6 |                                     *
+   3 |                            *
+   0 |                  *
+     |           *
+ -0.1|* * * *                 (small negative slope instead of flat 0)
+     +-------------------+---------------------> z
+    -6                   0                   6
+
+  The small slope on the negative side keeps a tiny gradient alive,
+  so the neuron can recover.
+
+
+12. RELU vs SIGMOID vs TANH
+------------------------------------------------------------------
+                  Sigmoid        Tanh          ReLU
+  Range           (0, 1)         (-1, 1)       (0, inf)
+  Zero-centered   No             Yes           No
+  Max derivative  0.25           1             1
+  Saturates       Both ends      Both ends     Only negative side
+  Vanishing grad  Severe         Moderate      Rare
+  Speed           Slow (exp)     Slow (exp)    Fast
+  Typical use     Binary output  RNN, hidden   Hidden layers (default)
