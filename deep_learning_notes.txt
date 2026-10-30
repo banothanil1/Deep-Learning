@@ -1137,3 +1137,198 @@ SOFTMAX ACTIVATION FUNCTION
 3.Every output lies between 0 and 1, and all outputs add up to 1.
 4.The output is therefore a probability distribution over the classes.
 5.The largest logit gets the highest probability, so it acts as a smooth version of argmax.
+
+
+==================================================
+LOSS / COST FUNCTIONS IN DEEP LEARNING
+==================================================
+
+BASICS
+--------------------------------------------------
+1. Loss function  : error for a single training example.
+2. Cost function  : average loss over the whole dataset (or batch).
+3. Goal           : minimize the cost by updating weights using
+                    gradient descent and backpropagation.
+4. Choice of loss depends on the problem type:
+                    Regression     -> predicting continuous values
+                    Classification -> predicting classes
+
+
+==================================================
+PART 1: REGRESSION LOSS FUNCTIONS
+==================================================
+
+1. MEAN SQUARED ERROR (MSE)
+--------------------------------------------------
+Formula : MSE = (1/n) * sum((y - y_pred)^2)
+ - Squares the difference between actual and predicted values
+ - Penalizes large errors heavily
+ - Smooth and differentiable everywhere
+ - Sensitive to outliers
+Keras   : loss='mean_squared_error'
+
+2. MEAN ABSOLUTE ERROR (MAE)
+--------------------------------------------------
+Formula : MAE = (1/n) * sum(|y - y_pred|)
+ - Takes the absolute difference
+ - Robust to outliers
+ - Not differentiable at zero
+ - Constant gradient, so convergence near minimum can be slow
+Keras   : loss='mean_absolute_error'
+
+3. ROOT MEAN SQUARED ERROR (RMSE)
+--------------------------------------------------
+Formula : RMSE = sqrt(MSE)
+ - Same unit as the target variable, easier to interpret
+ - Still sensitive to outliers
+
+4. HUBER LOSS
+--------------------------------------------------
+Formula : 0.5 * (y - y_pred)^2                 if |y - y_pred| <= delta
+          delta * (|y - y_pred| - 0.5*delta)   otherwise
+ - Combination of MSE and MAE
+ - Behaves like MSE for small errors, like MAE for large errors
+ - Robust to outliers and differentiable
+ - Needs hyperparameter delta to be tuned
+
+Output layer for regression: linear activation (no activation).
+
+
+==================================================
+PART 2: CLASSIFICATION LOSS FUNCTIONS
+==================================================
+
+1. BINARY CROSS-ENTROPY (LOG LOSS)
+--------------------------------------------------
+Formula : BCE = -(1/n) * sum(y*log(y_pred) + (1-y)*log(1-y_pred))
+ - Used for binary and multi-label classification
+ - Output layer: 1 neuron with sigmoid activation
+ - Penalizes confident wrong predictions very heavily
+
+2. CATEGORICAL CROSS-ENTROPY
+--------------------------------------------------
+Formula : CCE = -sum(y_i * log(y_pred_i))
+ - Used for multi-class classification (more than 2 classes)
+ - Labels must be one-hot encoded
+ - Output layer: n neurons with softmax activation
+
+3. SPARSE CATEGORICAL CROSS-ENTROPY
+--------------------------------------------------
+ - Same as categorical cross-entropy
+ - Labels are integers (0, 1, 2, ...) instead of one-hot vectors
+ - Saves memory when there are many classes
+
+==================================================
+QUICK COMPARISON
+==================================================
+Problem                      Loss                       Output Activation
+--------------------------------------------------------------------------
+Regression                   MSE / MAE / Huber / MSLE   Linear
+Binary classification        Binary cross-entropy       Sigmoid
+Multi-class (one-hot)        Categorical cross-entropy  Softmax
+Multi-class (integer)        Sparse categorical CE      Softmax
+
+==================================================
+GRADIENT DESCENT OPTIMIZER
+==================================================
+
+BASICS
+--------------------------------------------------
+1. Gradient descent is an optimization algorithm used to minimize
+   the cost function by updating the weights iteratively.
+2. The gradient (derivative of cost w.r.t. weights) gives the
+   direction of steepest increase. We move in the opposite
+   direction to reduce the cost.
+3. Gradients are computed using backpropagation.
+4. Goal: reach the global minimum (or a good local minimum) of
+   the cost function.
+
+WEIGHT UPDATE RULE
+--------------------------------------------------
+Formula : w_new = w_old - learning_rate * (dJ/dw)
+          b_new = b_old - learning_rate * (dJ/db)
+
+ w  = weight, b = bias
+ J  = cost function
+ dJ/dw = gradient of cost w.r.t. weight
+ learning_rate (alpha) = step size
+
+LEARNING RATE
+--------------------------------------------------
+ - Too small : training is very slow
+ - Too large : overshoots the minimum, may diverge
+ - Optimal   : converges smoothly and quickly
+ - Typical values: 0.1, 0.01, 0.001
+
+
+==================================================
+TYPES OF GRADIENT DESCENT
+==================================================
+
+1. BATCH GRADIENT DESCENT
+--------------------------------------------------
+ - Uses the entire dataset to compute the gradient for one update
+ - One update per epoch
+ - Smooth and stable convergence
+ - Very slow and memory heavy for large datasets
+ - Can get stuck in local minima
+
+2. STOCHASTIC GRADIENT DESCENT (SGD)
+--------------------------------------------------
+ - Uses one training example per update
+ - Many updates per epoch
+ - Fast and needs less memory
+ - Noisy updates, cost fluctuates
+ - Noise can help escape local minima
+ - Never settles exactly at the minimum
+
+3. MINI-BATCH GRADIENT DESCENT
+--------------------------------------------------
+ - Uses a small batch (32, 64, 128, ...) per update
+ - Balance between batch GD and SGD
+ - Faster and more stable than SGD
+ - Efficient with GPU vectorization
+ - Most commonly used in deep learning
+
+
+==================================================
+ADVANCED OPTIMIZERS
+==================================================
+
+1. SGD WITH MOMENTUM
+--------------------------------------------------
+Formula : v = beta*v + (1 - beta)*gradient
+          w = w - alpha*v
+ - Uses moving average of past gradients
+ - Speeds up convergence and reduces oscillations
+ - Typical beta = 0.9
+
+2. ADAGRAD
+--------------------------------------------------
+ - Adapts learning rate for each parameter
+ - Larger updates for rare features, smaller for frequent ones
+ - Learning rate keeps shrinking, so training may stop early
+
+3. RMSPROP
+--------------------------------------------------
+ - Fixes Adagrad's shrinking learning rate
+ - Uses exponentially decaying average of squared gradients
+ - Works well for RNNs
+
+4. ADAM (Adaptive Moment Estimation)
+--------------------------------------------------
+ - Combines Momentum and RMSProp
+ - Adaptive learning rate for each parameter
+ - Fast, efficient, and the default choice in most cases
+ - Typical values: beta1 = 0.9, beta2 = 0.999, alpha = 0.001
+
+
+==================================================
+PROBLEMS IN GRADIENT DESCENT
+==================================================
+1. Local minima     : may get stuck in a non-optimal minimum
+2. Saddle points    : gradient becomes near zero, training stalls
+3. Vanishing gradient : gradients become very small in deep networks,
+                        early layers learn slowly
+4. Exploding gradient : gradients become very large, weights blow up
+5. Choosing learning rate : needs careful tuning
