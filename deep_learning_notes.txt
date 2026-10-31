@@ -1482,3 +1482,39 @@ Weight update:
 
 If the gradient is huge, w_new becomes a very large number, and the
 weights blow up (overflow, NaN).
+
+==================================================
+DROPOUT LAYER
+==================================================
+
+1. WHAT IS IT
+--------------------------------------------------
+ - Dropout is a regularization technique used to reduce overfitting
+ - During training, it randomly turns off (sets to zero) a fraction
+   of neurons in a layer at every iteration
+ - The dropped neurons do not take part in the forward pass or the
+   backward pass for that iteration
+ - Proposed by Geoffrey Hinton and his team (Srivastava et al., 2014)
+
+
+2. WHY IT IS NEEDED
+--------------------------------------------------
+ - Deep networks have many parameters and easily overfit the
+   training data
+ - Neurons may become co-dependent, where one neuron relies on
+   specific other neurons (co-adaptation)
+ - Dropout forces every neuron to learn useful features on its own
+ - Overfitting: high training accuracy but low validation accuracy
+
+
+3. CORE IDEA
+--------------------------------------------------
+ - At each training iteration, every neuron is kept with
+   probability p (keep probability) and dropped with probability
+   (1 - p)
+ - A different random subset of neurons is dropped every time, so
+   a different "thinned" network is trained each iteration
+ - Dropout behaves like training a large ensemble of many smaller
+   networks that share weights
+ - At test time, the full network is used, which approximates the
+   average of all these networks
