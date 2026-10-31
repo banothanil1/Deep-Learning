@@ -1810,3 +1810,134 @@ Example:
    Output (2 x 2):
      3.75  5.25
      2.00  2.00
+
+
+==================================================
+CNN COMPLETE EXAMPLE (RGB ZEBRA IMAGE)
+==================================================
+
+Flow:
+ Input -> [Conv + ReLU -> Pooling] x 3 -> Flatten -> Fully Connected
+       -> Softmax -> Output (Horse / Zebra / Dog)
+
+The network has 3 parts:
+ 1. Feature Extraction  (Conv + ReLU + Pooling)
+ 2. Classification      (Flatten + Fully Connected layers)
+ 3. Probabilistic Distribution (Softmax output)
+
+
+==================================================
+1. INPUT
+--------------------------------------------------
+ - The input is an RGB image (zebra) of shape (H, W, 3)
+ - Pixel values (0 to 255) are normalized to the 0-1 range
+   by dividing by 255
+ - The image is passed to the first convolution layer
+
+
+==================================================
+2. FEATURE EXTRACTION (CONVOLUTION + RELU + POOLING)
+--------------------------------------------------
+Kernel (Filter):
+ - A small matrix (yellow box in the diagram) slides over the image
+ - It multiplies with each patch and sums the result to give one
+   value of the feature map
+ - Kernel values are weights, learned during training
+ - For an RGB image, filter depth = 3 (example 3 x 3 x 3)
+
+Convolution + ReLU:
+ - Convolution creates feature maps (one feature map per filter)
+ - ReLU is applied on every feature map: f(x) = max(0, x)
+ - ReLU removes negative values and adds non-linearity
+
+Pooling:
+ - Reduces the height and width of the feature maps
+ - Channels remain the same
+ - Reduces computation and overfitting, gives translation invariance
+ - No learnable parameters
+
+Repeated 3 times (as in the diagram):
+ Layer 1 : Conv + ReLU -> Pooling   (detects edges, lines)
+ Layer 2 : Conv + ReLU -> Pooling   (detects textures, patterns,
+                                      like zebra stripes)
+ Layer 3 : Conv + ReLU -> Pooling   (detects high-level shapes,
+                                      like body, legs, head)
+
+Observation from the diagram:
+ - Spatial size decreases after every pooling
+ - Number of feature maps (depth) increases in deeper layers
+ - Early layers learn simple features, deeper layers learn complex
+   features
+
+Example shape change:
+ Input         (224, 224, 3)
+ Conv1 + ReLU  (224, 224, 32)  -> Pool -> (112, 112, 32)
+ Conv2 + ReLU  (112, 112, 64)  -> Pool -> (56, 56, 64)
+ Conv3 + ReLU  (56, 56, 128)   -> Pool -> (28, 28, 128)
+
+
+==================================================
+3. FLATTEN LAYER
+--------------------------------------------------
+ - Converts the final 3D feature maps into a 1D vector
+ - It is needed because fully connected layers accept only 1D input
+ - No learnable parameters
+
+ Example: (28, 28, 128) -> 28 x 28 x 128 = 100,352 values
+
+
+==================================================
+4. FULLY CONNECTED LAYER (CLASSIFICATION)
+--------------------------------------------------
+ - Every neuron is connected to all neurons of the previous layer
+ - Uses the extracted features to decide the class
+ - Hidden layers use ReLU activation
+ - Number of neurons in the last layer = number of classes
+   (here 3: Horse, Zebra, Dog)
+ - Dropout can be added here to reduce overfitting
+
+
+==================================================
+5. OUTPUT LAYER (SOFTMAX)
+--------------------------------------------------
+ - Softmax converts the output scores (logits) into probabilities
+ - All probabilities lie between 0 and 1 and add up to 1
+
+ Output in the diagram:
+   Horse = 0.2
+   Zebra = 0.7
+   Dog   = 0.1
+   Sum   = 0.2 + 0.7 + 0.1 = 1.0
+
+ - The highest probability is the predicted class
+   -> Zebra (0.7)
+ - This is the "Probabilistic Distribution" part of the diagram
+
+
+==================================================
+6. LOSS (y - y_hat) AND TRAINING
+--------------------------------------------------
+ - Loss measures the difference between the actual value (y) and
+   the predicted value (y_hat)
+ - For multi-class classification: Categorical Cross-Entropy
+
+ Example:
+   Actual y (one-hot) : Horse = 0, Zebra = 1, Dog = 0
+   Predicted y_hat    : Horse = 0.2, Zebra = 0.7, Dog = 0.1
+   Loss = -log(0.7) = 0.357
+
+ Training process:
+  1. Forward propagation: input -> conv -> pooling -> flatten ->
+     FC -> softmax -> prediction
+  2. Calculate loss using y and y_hat
+  3. Backpropagation: gradients flow backward from the output to
+     the kernels (green arrow in the diagram, right to left)
+  4. Optimizer (Adam, SGD) updates the weights and kernel values
+  5. Repeat for many epochs until the loss is minimum
+
+
+==================================================
+RED ARROW VS GREEN ARROW (DIAGRAM)
+--------------------------------------------------
+ Red arrow   (left to right) : Forward propagation
+ Green arrow (right to left) : Backward propagation
