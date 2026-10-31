@@ -1295,32 +1295,136 @@ TYPES OF GRADIENT DESCENT
 ADVANCED OPTIMIZERS
 ==================================================
 
-1. SGD WITH MOMENTUM
---------------------------------------------------
-Formula : v = beta*v + (1 - beta)*gradient
-          w = w - alpha*v
- - Uses moving average of past gradients
- - Speeds up convergence and reduces oscillations
- - Typical beta = 0.9
+==================================================
+SGD WITH MOMENTUM
+==================================================
 
-2. ADAGRAD
+1. WHY IT IS NEEDED
 --------------------------------------------------
- - Adapts learning rate for each parameter
- - Larger updates for rare features, smaller for frequent ones
- - Learning rate keeps shrinking, so training may stop early
+ - Plain SGD has noisy, zigzag updates, especially in ravines
+   (steep in one direction, shallow in another)
+ - It oscillates across the steep direction and makes slow
+   progress along the shallow one
+ - It can also get slowed down on plateaus and saddle points
+
+2. CORE IDEA
+--------------------------------------------------
+ - Instead of using only the current gradient, keep a running
+   average of past gradients (called "velocity") and update
+   using that
+ - Think of a heavy ball rolling downhill: it builds up speed in
+   a consistent direction and is not thrown off by small bumps
+
+
+3. UPDATE EQUATIONS
+--------------------------------------------------
+Standard form:
+   v_t       = beta * v_(t-1) + gradient(L(theta_t))
+   theta_t+1 = theta_t - eta * v_t
+
+Exponentially weighted average form:
+   v_t       = beta * v_(t-1) + (1 - beta) * gradient(L(theta_t))
+   theta_t+1 = theta_t - eta * v_t
+
+Where:
+ theta = parameters (weights)
+ eta   = learning rate
+ beta  = momentum coefficient (typically 0.9)
+ v     = velocity (initialized to 0)
+
+
+4. HOW IT REDUCES NOISE
+--------------------------------------------------
+ - Gradients pointing in a consistent direction add up, so the
+   update moves faster
+ - Gradients that flip sign (oscillations) cancel each other out,
+   so there is less movement in that direction
+ - Effectively averages over roughly 1/(1 - beta) recent steps
+   (beta = 0.9 means about 10 steps)
+
+
+5. EFFECT OF BETA
+--------------------------------------------------
+ beta value     Behavior
+ ----------     -------------------------------------------
+ 0              Same as plain SGD
+ 0.5            Light smoothing
+ 0.9            Common default
+ 0.99           Very heavy smoothing, slow to change direction,
+                can overshoot
+7. ADVANTAGES
+--------------------------------------------------
+ 1. Faster convergence than plain SGD and mini batch SGD
+ 2. Dampens oscillations in ravines
+ 3. Helps move through plateaus and shallow local minima
+ 4. Reduces gradient noise
+
+8. DISADVANTAGES
+--------------------------------------------------
+ 1. One extra hyperparameter (beta) to tune
+ 2. Can overshoot the minimum because of built-up velocity
+ 3. Needs an extra memory buffer for v (same size as the
+    parameters)
+
+==================================================
+ADAGRAD OPTIMIZER
+==================================================
+
+1. WHY IT IS NEEDED
+--------------------------------------------------
+ - In plain SGD, the same learning rate is used for all parameters
+ - Sparse features (rarely occurring) get few updates, so they
+   learn slowly
+ - Frequent features get updated often and may need smaller steps
+ - Adagrad solves this by giving each parameter its own learning
+   rate
+
+
+2. CORE IDEA
+--------------------------------------------------
+ - Adagrad = Adaptive Gradient Algorithm
+ - It accumulates the sum of squared gradients for each parameter
+ - Parameters with large past gradients get a smaller learning rate
+ - Parameters with small past gradients get a larger learning rate
+ - Larger updates for rare features, smaller updates for frequent
+   features
+
+
+3. UPDATE EQUATIONS
+--------------------------------------------------
+   G_t       = G_(t-1) + (gradient_t)^2
+   theta_t+1 = theta_t - (eta / sqrt(G_t + epsilon)) * gradient_t
+
+Where:
+ theta   = parameters (weights)
+ eta     = initial learning rate (typically 0.01)
+ G_t     = sum of squares of all past gradients (per parameter)
+ epsilon = small constant (about 1e-8) to avoid division by zero
+ G is initialized to 0
+
+
+4. HOW IT WORKS (STEP BY STEP)
+--------------------------------------------------
+ 1. Compute the gradient for the current batch
+ 2. Square the gradient and add it to the accumulator G
+ 3. Compute the adaptive learning rate = eta / sqrt(G + epsilon)
+ 4. Update the weights using this adaptive learning rate
+ 5. Repeat for every iteration
 
 3. RMSPROP
 --------------------------------------------------
  - Fixes Adagrad's shrinking learning rate
- - Uses exponentially decaying average of squared gradients
+ - Uses exponentially weighted average of squared gradients
  - Works well for RNNs
 
 4. ADAM (Adaptive Moment Estimation)
 --------------------------------------------------
- - Combines Momentum and RMSProp
- - Adaptive learning rate for each parameter
- - Fast, efficient, and the default choice in most cases
- - Typical values: beta1 = 0.9, beta2 = 0.999, alpha = 0.001
+ - SGD with Momentum smooths the updates but uses the same
+   learning rate for all parameters
+ - Adagrad adapts the learning rate per parameter, but it keeps
+   shrinking and training may stop early
+ - RMSProp fixes the shrinking problem but has no momentum
+ - Adam combines the best of both: Momentum + RMSProp
 
 
 ==================================================
