@@ -1436,3 +1436,49 @@ PROBLEMS IN GRADIENT DESCENT
                         early layers learn slowly
 4. Exploding gradient : gradients become very large, weights blow up
 5. Choosing learning rate : needs careful tuning
+
+==================================================
+EXPLODING GRADIENT PROBLEM
+==================================================
+
+1. WHAT IS IT
+--------------------------------------------------
+ - During backpropagation, gradients are multiplied layer by layer
+   using the chain rule
+ - If these gradients are larger than 1, the product keeps growing
+   as it moves towards the early layers
+ - Gradients become extremely large, which makes the weight updates
+   huge and the training unstable
+ - It is the opposite of the vanishing gradient problem
+ - Common in deep networks and in RNNs (long sequences)
+
+
+2. WHY IT HAPPENS
+--------------------------------------------------
+ - Weights initialized with large values
+ - Deep networks: many layers multiply the gradients together
+ - RNNs: the same weight matrix is multiplied at every time step
+ - High learning rate
+ - Activation functions whose derivative is not bounded (like ReLU)
+   do not squash large gradients
+ - Poor data scaling (inputs with very large values)
+
+
+3. MATHEMATICAL INTUITION
+--------------------------------------------------
+Chain rule for an n-layer network:
+
+   dL/dw1 = dL/dy * dy/da_n * da_n/da_(n-1) * ... * da_2/da_1 * da_1/dw1
+
+If each term is greater than 1 (say 1.5), the product grows
+exponentially with the number of layers:
+
+   1.5^10 = 57.7
+   1.5^20 = 3,325
+   1.5^50 = 640,000,000 (about 6.4 x 10^8)
+
+Weight update:
+   w_new = w_old - learning_rate * gradient
+
+If the gradient is huge, w_new becomes a very large number, and the
+weights blow up (overflow, NaN).
