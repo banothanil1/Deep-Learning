@@ -1518,3 +1518,165 @@ DROPOUT LAYER
    networks that share weights
  - At test time, the full network is used, which approximates the
    average of all these networks
+
+==================================================
+GRAYSCALE vs RGB IMAGES AND CHANNELS (SHORT NOTES)
+==================================================
+
+1. PIXEL
+--------------------------------------------------
+ - A digital image is a 2D grid of pixels
+ - Each pixel has a value from 0 to 255 (8-bit)
+ - 0 = black (lowest intensity), 255 = white (highest intensity)
+
+
+2. CHANNEL
+--------------------------------------------------
+ - A channel is one 2D matrix of an image
+ - Number of channels = depth of the image
+ - Image shape = (Height, Width, Channels)
+
+
+3. GRAYSCALE IMAGE
+--------------------------------------------------
+ - 1 channel, shape (H, W, 1)
+ - One value per pixel (0 to 255), only brightness, no color
+ - 1 byte per pixel
+ - Examples: MNIST (28, 28, 1), X-ray images
+
+ Intensity scale:
+  0         64        128        192        255
+  |----------|----------|----------|----------|
+  Black                                    White
+
+
+4. RGB IMAGE
+--------------------------------------------------
+ - 3 channels: Red, Green, Blue, shape (H, W, 3)
+ - Three values per pixel (R, G, B), each 0 to 255
+ - 3 bytes per pixel
+ - Total colors = 256 x 256 x 256 = 16,777,216
+ - Examples: CIFAR-10 (32, 32, 3), ImageNet (224, 224, 3)
+
+ Common colors (R, G, B):
+  Black   (0, 0, 0)         White   (255, 255, 255)
+  Red     (255, 0, 0)       Green   (0, 255, 0)
+  Blue    (0, 0, 255)       Yellow  (255, 255, 0)
+
+ Structure:
+       +-----------------+
+      /  Blue channel   /|
+     +-----------------+ |
+    /  Green channel  /| +
+   +-----------------+ |/|
+   |  Red channel    | + |
+   |                 |/
+   +-----------------+
+
+
+5. GRAYSCALE VS RGB
+--------------------------------------------------
+ Grayscale                    RGB
+ --------------------------   --------------------------
+ 1 channel                    3 channels
+ 1 value per pixel            3 values per pixel
+ Brightness only              Brightness and color
+ Less memory, faster          More memory, slower
+
+
+==================================================
+STEPS OF A CNN (SHORT THEORY WITH EXAMPLE)
+==================================================
+
+STEP 1: CONVERTING PIXELS TO THE 0-1 RANGE (NORMALIZATION)
+--------------------------------------------------
+Theory:
+ - An image enters the CNN as a matrix of pixel values from 0 to 255
+ - Every pixel is divided by 255 so all values lie between 0 and 1
+ - This makes gradient descent faster and more stable, and avoids
+   very large activations
+ - For an RGB image, each of the 3 channels is divided by 255
+
+Example:
+   Before                  After (divide by 255)
+   [  0   64  128]         [0.00  0.25  0.50]
+   [ 64  128  255]         [0.25  0.50  1.00]
+   [  0  255  255]         [0.00  1.00  1.00]
+
+
+STEP 2: CONVOLUTION OPERATION
+--------------------------------------------------
+Theory:
+ - A small matrix called a filter (kernel) slides over the image
+ - At each position, it multiplies with the image patch element by
+   element and adds the results to get one number
+ - These numbers form a feature map, which detects features like
+   edges and textures
+ - Stride is how many pixels the filter moves each step, and padding
+   adds a border of zeros
+ - The filter values are weights, learned during training
+ - Output size = (n + 2p - f) / s + 1
+
+Example:
+   Image (4 x 4)          Filter (3 x 3)
+    1 1 1 0                1 0 1
+    0 1 1 1                0 1 0
+    0 0 1 1                1 0 1
+    0 1 1 0
+
+ First position (top-left 3x3 patch):
+   (1*1 + 1*0 + 1*1) + (0*0 + 1*1 + 1*0) + (0*1 + 0*0 + 1*1)
+   = 2 + 1 + 1 = 4
+
+ Second position (filter moved 1 step right):
+   (1*1 + 1*0 + 0*1) + (1*0 + 1*1 + 1*0) + (0*1 + 1*0 + 1*1)
+   = 1 + 1 + 1 = 3
+
+ The filter continues sliding right and down. Output size:
+   (4 + 0 - 3)/1 + 1 = 2  -> 2 x 2 feature map
+
+DENORMALIZATION (REVERSE OF NORMALIZATION)
+--------------------------------------------------
+Theory:
+ - Denormalization converts the 0-1 values back to the original
+   0-255 pixel range
+ - The CNN works on normalized values, but to display, save, or
+   compare an image we need real pixel values again
+
+==================================================
+PADDING IN CNN
+==================================================
+
+1. WHAT IS IT
+--------------------------------------------------
+ - Padding means adding extra pixels (usually zeros) around the
+   border of the input image before applying convolution
+ - Zero padding is the most common type
+ - It is controlled by the padding value p (number of pixels added
+   on each side)
+
+Example: 3 x 3 image with padding p = 1 becomes 5 x 5
+
+   Original            After zero padding (p = 1)
+   [1  2  3]           [0  0  0  0  0]
+   [4  5  6]           [0  1  2  3  0]
+   [7  8  9]           [0  4  5  6  0]
+                       [0  7  8  9  0]
+                       [0  0  0  0  0]
+
+2. WHY IT IS NEEDED
+--------------------------------------------------
+ - Without padding, the image shrinks after every convolution
+   layer, so deep networks would run out of size quickly
+ - Border and corner pixels are covered by the filter only a few
+   times, while center pixels are covered many times, so border
+   information gets lost
+ - Padding keeps the output size the same as the input (if needed)
+ - Padding preserves information at the edges of the image
+
+formula = n - f + 2p + 1 = output size
+  n -> input size
+  f -> filter size
+  p -> padding size
+  output size -> whatever the output size you need like similar to input size ie n
+
