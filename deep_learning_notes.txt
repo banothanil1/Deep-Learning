@@ -1941,3 +1941,85 @@ RED ARROW VS GREEN ARROW (DIAGRAM)
 --------------------------------------------------
  Red arrow   (left to right) : Forward propagation
  Green arrow (right to left) : Backward propagation
+
+# Simple RNN Notes
+==================================================
+## 1. Why a normal ANN struggles with sequence data
+
+Sequence data: sentences, speech, time series, stock prices.
+Here order matters and length varies.
+
+| Drawback of ANN                   | Explanation                                                              |
+|-----------------------------------|--------------------------------------------------------------------------|
+| Fixed input size                  | Needs the same number of inputs every time, so you must pad or cut       |
+| No memory                         | Each input is processed alone, nothing from before is remembered         |
+| Order is ignored                  | "Dog bites man" and "man bites dog" look nearly the same as a bag        |
+| Too many weights                  | Flattened sentence (100 words x 100 numbers) = 10,000 inputs, all connected |
+| No weight sharing across positions| A pattern learned at position 1 is not reused at position 5              |
+| Wasted computation on padding     | Padded zeros are still processed                                         |
+
+## 2. Why we use an RNN
+
+An RNN reads the sequence one step at a time and carries a memory forward.
+
+- Handles variable length input (the same layer is reused at every step)
+- Has memory: previous output feeds back in through W'
+- Order-aware: output at step t depends on all earlier words
+- Fewer parameters: the same W, W', b are shared across all time steps
+
+Uses: sentiment analysis, next word prediction, machine translation,
+speech recognition, time series forecasting
+
+## 3. How a Simple RNN works
+
+At each time step t:
+
+    O_t = f( x_t . W + O_(t-1) . W' + b )
+
+- x_t   = current input (word at step t)
+- W     = input-to-hidden weight
+- W'    = hidden-to-hidden weight (carries memory)
+- b     = bias
+- f     = activation function (tanh or ReLU)
+- At t=1 there is no previous output, so the W' term is zero
+- W, W', b are the SAME at every time step
+
+Sizes (example: 4 numbers per word, 3 neurons):
+- W  : 4 x 3
+- W' : 3 x 3
+- b  : 3 values
+- Each O_t is a vector of 3 values
+
+## 4. Types of RNN architecture
+
+| Type          | Input -> Output | Example                                  |
+|---------------|-----------------|------------------------------------------|
+| One-to-many   | 1 -> many       | image captioning                         |
+| Many-to-one   | many -> 1       | sentiment analysis ("The food is good" -> 1) |
+| Many-to-many  | many -> many    | machine translation, NER                 |
+
+## 5. Training (short version)
+
+1. Forward propagation: compute O1 to O4
+2. Prediction: pass the last output through an output layer to get y_hat
+3. Loss: compare y_hat with the true label
+4. BPTT (Backpropagation Through Time): gradients flow backward through all time steps
+5. Update: gradients of W and W' from all steps are summed, then weights are updated
+
+## 6. Drawbacks of Simple RNN
+
+- Vanishing gradient: gradients shrink going back through many steps,
+  so early words get almost no learning signal
+- Exploding gradient: gradients grow too large, training becomes unstable
+- Short-term memory: forgets information from far back in long sentences
+- Slow training: steps run one after another, cannot be parallelized
+
+These problems led to LSTM and GRU, which use gates to decide what to
+remember and forget.
+
+## 7. One-line summary
+
+ANN has no memory and needs fixed-size input.
+Simple RNN adds a feedback loop (W') so it remembers the past and handles
+any sequence length, but it forgets over long sequences.
+
