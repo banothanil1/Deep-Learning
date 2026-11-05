@@ -2023,3 +2023,282 @@ ANN has no memory and needs fixed-size input.
 Simple RNN adds a feedback loop (W') so it remembers the past and handles
 any sequence length, but it forgets over long sequences.
 
+
+# LSTM (Long Short-Term Memory) Notes
+=====================================
+## 1. What is an LSTM?
+
+LSTM is a special type of RNN designed to learn **long-range dependencies** in sequence data (text, speech, time series).
+
+- A plain RNN has one hidden state that is overwritten at every step.
+- An LSTM adds a separate **cell state**, a "conveyor belt" that carries information across many time steps, controlled by **gates**.
+
+## 2. Why is it used?
+
+| Problem in simple RNN | How LSTM solves it |
+|---|---|
+| Vanishing gradient: gradients shrink to ~0 during BPTT, so early inputs are not learned | Cell state is updated mostly by **addition**, so gradients flow back with little decay |
+| Exploding gradient | Gates keep values controlled (and gradient clipping helps) |
+| Short memory: forgets early words in long sequences | Gates decide what to **keep, add, and expose** |
+
+Example: in "I grew up in France... I speak fluent ___", the model must remember "France" across many words.
+
+**Common uses:** machine translation, speech recognition, sentiment analysis, time-series forecasting, text generation, anomaly detection.
+
+## 3. LSTM architecture (cell diagram)
+
+     C(t-1) ──────────►(×)─────────────────►(+)──────────────┬──────────► C(t)
+     (cell state)       ▲                     ▲               │
+                        │                     │               ▼
+                        │                    (×)            [tanh]
+                        │                   ▲   ▲             │
+                        │                   │   │             ▼
+                        │         ┌─────────┘   │            (×)◄──────────┐
+                        │         │             │             │            │
+                   ┌────┴───┐ ┌───┴────┐ ┌──────┴─────┐       ▼       ┌────┴───┐
+                   │ Forget │ │ Input  │ │ Candidate  │      h(t)     │ Output │
+                   │ gate σ │ │ gate σ │ │  gate tanh │               │ gate σ │
+                   └────▲───┘ └───▲────┘ └──────▲─────┘               └────▲───┘
+                        │         │             │                          │
+                        └─────────┴──────┬──────┴──────────────────────────┘
+                                         │
+                            [ h(t-1) , x(t) ]  (concatenated inputs)
+
+Legend: σ = sigmoid (0 to 1), tanh = (-1 to 1), (×) = element-wise multiply, (+) = element-wise add.
+
+### Main components
+- **Cell state C(t):** the long-term memory line running across the top.
+- **Hidden state h(t):** the short-term memory and the output of each step.
+- **Gates:** sigmoid layers that act like valves (0 = block everything, 1 = pass everything).
+
+## 4. The gates and their roles
+
+All gates take the previous hidden state h(t-1) and the current input x(t).
+
+### 4.1 Forget gate
+
+    f(t) = σ(W_f · [h(t-1), x(t)] + b_f)
+
+Decides **what to erase** from the old cell state. Near 0 = forget, near 1 = keep.
+
+### 4.2 Input gate
+
+    i(t) = σ(W_i · [h(t-1), x(t)] + b_i)
+
+Decides **how much new information to write** into the cell state.
+
+### 4.3 Candidate (cell) gate
+
+    C~(t) = tanh(W_c · [h(t-1), x(t)] + b_c)
+
+Creates **new candidate values** (-1 to 1). The input gate controls how much of this is used.
+
+### 4.4 Output gate
+
+    o(t) = σ(W_o · [h(t-1), x(t)] + b_o)
+
+Decides **how much of the cell state is exposed** as the hidden state.
+
+## 5. Cell state and output
+
+    C(t) = f(t) * C(t-1) + i(t) * C~(t)     (forget old + add new)
+    h(t) = o(t) * tanh(C(t))                (output / hidden state)
+
+## 6. Step-by-step working of one LSTM cell
+
+1. Combine h(t-1) and x(t).
+2. **Forget gate** decides which parts of C(t-1) to discard.
+3. **Input gate** and **candidate** decide what new information to add.
+4. Update the cell state: multiply the old state by the forget gate, then add the filtered new information.
+5. **Output gate** decides what part of the (tanh-squashed) cell state becomes h(t).
+6. C(t) and h(t) are passed to the next time step.
+
+## 7. Summary table
+
+| Part | Activation | Role |
+|---|---|---|
+| Cell state C(t) | linear path | Long-term memory |
+| Hidden state h(t) | o(t) * tanh(C(t)) | Short-term memory / output |
+| Forget gate | sigmoid | What to throw away |
+| Input gate | sigmoid | What to store |
+| Candidate | tanh | New values to store |
+| Output gate | sigmoid | What to output |
+
+## 8. RNN vs LSTM vs GRU
+
+| Model | Structure | Notes |
+|---|---|---|
+| RNN | 1 hidden state, no gates | Struggles with long sequences |
+| LSTM | Cell state + 3 gates | Handles long sequences, more parameters, slower |
+| GRU | 2 gates (reset, update), no cell state | Simpler and faster, often similar accuracy |
+
+# Training an LSTM with Word2Vec: Notes
+
+## 1. Overview
+
+Neural networks cannot read raw text, so words must be converted into numbers. **Word2Vec** turns each word into a dense vector (an embedding) that captures meaning. These vectors are then fed into an **LSTM**, which learns the sequence patterns and produces the final prediction (sentiment, next word, translation, etc.).
+
+Training has two parts:
+1. Get the word vectors (train Word2Vec, or use pretrained ones).
+2. Train the LSTM on sequences of those vectors.
+
+## 2. Overall pipeline
+
+    Raw text
+       │
+       ▼
+    Preprocessing (clean, lowercase, remove noise)
+       │
+       ▼
+    Tokenization (split into words)
+       │
+       ▼
+    Vocabulary + word index (word → integer ID)
+       │
+       ▼
+    Word2Vec embeddings (word ID → dense vector)
+       │
+       ▼
+    Padding / truncation (equal sequence length)
+       │
+       ▼
+    LSTM layer(s) (reads the vectors one time step at a time)
+       │
+       ▼
+    Dense layer + Softmax / Sigmoid (prediction)
+       │
+       ▼
+    Loss → Backpropagation Through Time → Weight update
+
+## 3. Why Word2Vec instead of one-hot encoding?
+
+| One-hot encoding | Word2Vec embedding |
+|---|---|
+| Very long, sparse vectors (size = vocabulary) | Short, dense vectors (e.g. 100 to 300 dimensions) |
+| No relationship between words | Similar words have similar vectors |
+| "good" and "great" look completely different | "good" and "great" are close in vector space |
+| Wastes memory | Compact and efficient |
+
+Famous example: vector("king") - vector("man") + vector("woman") ≈ vector("queen").
+
+## 4. Step 1: Text preparation
+
+1. **Cleaning:** lowercase, remove punctuation, HTML tags, special characters and extra spaces.
+2. **Tokenization:** split sentences into words (tokens).
+3. **Stop words and stemming/lemmatization (optional):** remove very common words or reduce words to their root form.
+4. **Vocabulary building:** collect unique words and give each an integer ID. Rare words are often replaced with an unknown token (UNK).
+5. **Padding and truncation:** sentences have different lengths, so shorter ones are padded (usually with zeros) and longer ones are cut to a fixed length so batches can be formed.
+
+## 5. Step 2: Word2Vec training
+
+Word2Vec is a shallow neural network (one hidden layer) trained on a simple prediction task. The idea is that words appearing in similar contexts have similar meanings. After training, the hidden layer weights become the word vectors.
+
+### 5.1 CBOW (Continuous Bag of Words)
+- **Input:** the surrounding context words.
+- **Output:** predict the centre word.
+- Faster, works well for frequent words.
+
+Example: context "the cat ___ on the mat" → predict "sat".
+
+### 5.2 Skip-gram
+- **Input:** the centre word.
+- **Output:** predict the surrounding context words.
+- Slower, but works better for rare words and small datasets.
+
+Example: centre word "sat" → predict "the", "cat", "on", "the".
+
+### 5.3 Important Word2Vec settings
+- **Window size:** how many words on each side count as context.
+- **Embedding dimension:** length of each word vector (commonly 100 to 300).
+- **Minimum count:** ignore words appearing fewer times than this.
+- **Negative sampling:** instead of updating weights for the whole vocabulary, update only the correct word and a few random wrong words. This makes training much faster.
+
+### 5.4 Result
+An embedding matrix of size (vocabulary size × embedding dimension), where each row is one word's vector.
+
+## 6. Step 3: Embedding layer options
+
+| Option | Description | When to use |
+|---|---|---|
+| Train your own Word2Vec | Learn vectors from your own dataset | Large, domain-specific data |
+| Pretrained vectors (Word2Vec, GloVe, FastText) | Use vectors trained on huge corpora | Small datasets |
+| Frozen embeddings | Vectors are not changed during LSTM training | Very small data, avoid overfitting |
+| Fine-tuned embeddings | Vectors keep updating during LSTM training | Enough data, want task-specific meaning |
+
+## 7. Step 4: LSTM training process
+
+### 7.1 Forward pass
+1. A sentence is converted into a sequence of word vectors x(1), x(2), ..., x(T).
+2. At each time step t, the LSTM takes x(t) and the previous states h(t-1) and C(t-1).
+3. The forget, input, candidate and output gates compute the new cell state C(t) and hidden state h(t).
+4. After the last word (or at every word, depending on the task), h(t) goes to a dense layer.
+5. The output layer gives the prediction:
+   - Sigmoid for binary tasks (positive or negative).
+   - Softmax for multi-class tasks or next-word prediction.
+
+### 7.2 Loss calculation
+The loss measures how wrong the prediction is.
+- **Binary cross-entropy:** for two classes.
+- **Categorical cross-entropy:** for many classes.
+- **Mean squared error:** for regression or forecasting.
+
+### 7.3 Backpropagation Through Time (BPTT)
+- The network is "unrolled" across all time steps.
+- The loss gradient is calculated at the output and sent backwards through every time step.
+- Gradients are calculated for all weights: gate weights, biases, the dense layer, and the embeddings (if fine-tuned).
+- Because the cell state is updated mostly by addition, gradients survive across many steps, which reduces the vanishing gradient problem.
+
+### 7.4 Weight update
+An optimizer updates the weights using the gradients:
+- **SGD:** simple, can be slow.
+- **RMSprop:** adapts learning rate per weight, popular for RNNs.
+- **Adam:** most commonly used, fast and stable.
+
+### 7.5 Epochs and batches
+- **Batch:** a small group of sentences processed together.
+- **Epoch:** one full pass over the whole training data.
+- Steps 7.1 to 7.4 are repeated for every batch, for many epochs, until the loss stops improving.
+
+## 8. Techniques used to improve training
+
+| Technique | Purpose |
+|---|---|
+| Gradient clipping | Limits very large gradients (prevents exploding gradients) |
+| Dropout | Randomly switches off neurons to reduce overfitting |
+| Recurrent dropout | Dropout applied inside the recurrent connections |
+| Early stopping | Stops training when validation loss stops improving |
+| Learning rate scheduling | Lowers learning rate as training progresses |
+| Bidirectional LSTM | Reads the sentence forwards and backwards for more context |
+| Stacked LSTM | Several LSTM layers for learning more complex patterns |
+| Masking | Tells the LSTM to ignore padded positions |
+
+## 9. Data splitting and evaluation
+
+- **Training set (about 70 to 80%):** used to learn weights.
+- **Validation set (about 10 to 15%):** used to tune settings and detect overfitting.
+- **Test set (about 10 to 15%):** used only once for the final score.
+
+Common metrics:
+- Classification: accuracy, precision, recall, F1-score, confusion matrix.
+- Language modelling: perplexity.
+- Regression: MSE, RMSE, MAE.
+
+## 10. Common problems and fixes
+
+| Problem | Cause | Fix |
+|---|---|---|
+| Overfitting (high train accuracy, low validation accuracy) | Model memorises data | Dropout, more data, early stopping, freeze embeddings |
+| Underfitting | Model too simple or too little training | More units or layers, train longer |
+| Exploding gradients | Very large gradient values | Gradient clipping |
+| Slow training | Long sequences, large model | Smaller batches or sequence length, GRU, GPU |
+| Unknown words | Words not in vocabulary | UNK token, FastText (uses subword information) |
+
+## 11. Summary
+
+1. Clean and tokenize the text, then build a vocabulary.
+2. Train Word2Vec (CBOW or Skip-gram) or load pretrained vectors.
+3. Convert each sentence into a padded sequence of word vectors.
+4. Feed the sequence into the LSTM, one word at a time.
+5. Compute the prediction and the loss.
+6. Use BPTT to get gradients and update the weights with an optimizer.
+7. Repeat for many epochs, monitor validation performance, then test.
