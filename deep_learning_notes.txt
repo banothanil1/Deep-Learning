@@ -2302,3 +2302,171 @@ Common metrics:
 5. Compute the prediction and the loss.
 6. Use BPTT to get gradients and update the weights with an optimizer.
 7. Repeat for many epochs, monitor validation performance, then test.
+
+
+# GRU (Gated Recurrent Unit) Notes
+----------------------------------
+## 1. What is a GRU?
+
+GRU stands for **Gated Recurrent Unit**. It is a type of RNN that uses gates to control the flow of information, just like an LSTM, but with a simpler design.
+
+- It has only **2 gates**: the **reset gate** and the **update gate**.
+- It has **no separate cell state**. The hidden state h(t) does the job of both memory and output.
+- It was introduced by Kyunghyun Cho and colleagues in 2014.
+
+In one line: a GRU is a lighter, faster version of the LSTM that still solves the vanishing gradient problem.
+
+## 2. Why did GRU come? (the motivation)
+
+1. **Simple RNNs fail on long sequences.** Gradients vanish during backpropagation through time, so the network forgets early inputs.
+2. **LSTM solved this, but it is heavy.** It has 3 gates, a separate cell state and 4 sets of weights, so it needs more memory and more computation.
+3. **Researchers asked:** can we keep the memory benefits of gating with fewer parameters and faster training?
+4. **GRU was the answer.** It merges the cell state and hidden state into one, and combines the forget and input gates into a single update gate.
+
+Result: fewer parameters, faster training, less overfitting on small datasets, and often accuracy similar to LSTM.
+
+## 3. Main idea
+
+Two questions are answered at every time step:
+- **How much of the past should I keep?** (update gate)
+- **How much of the past is relevant for creating new information?** (reset gate)
+
+## 4. GRU architecture (cell diagram)
+
+        h(t-1) , x(t)
+             │
+             ├───────────────────────┐
+             ▼                       ▼
+        ┌──────────┐           ┌──────────┐
+        │ Reset  r │           │ Update z │
+        │ sigmoid  │           │ sigmoid  │
+        └────┬─────┘           └────┬─────┘
+             │                      │
+             ▼                      │
+         r × h(t-1)                 │
+             │                      │
+             ▼                      │
+        ┌───────────┐               │
+        │ Candidate │               │
+        │ tanh  h~  │ ◄── x(t)      │
+        └────┬──────┘               │
+             │                      │
+             ▼                      ▼
+        h(t) = (1 - z) × h(t-1)  +  z × h~(t)
+                       ▲
+                       └── old state h(t-1) is reused here
+
+Legend: sigmoid gives values from 0 to 1, tanh gives values from -1 to 1, × is element-wise multiplication.
+
+### Main components
+- **Hidden state h(t):** the only state. It carries memory across time steps and is also the output.
+- **Reset gate r(t):** controls how much of the past to use when creating new information.
+- **Update gate z(t):** controls how much of the old state to keep and how much to replace.
+- **Candidate state h~(t):** the proposed new memory.
+
+## 5. The gates and their roles
+
+Both gates take the previous hidden state h(t-1) and the current input x(t).
+
+### 5.1 Reset gate
+
+    r(t) = σ(W_r · [h(t-1), x(t)] + b_r)
+
+- Decides **how much past information to forget** when building the new candidate.
+- Near 0: ignore the past, start fresh from the current input.
+- Near 1: use the full past.
+- Helps capture **short-term dependencies**.
+
+### 5.2 Update gate
+
+    z(t) = σ(W_z · [h(t-1), x(t)] + b_z)
+
+- Decides **how much of the old state to carry forward** and how much of the new candidate to accept.
+- Near 0: keep the old memory almost unchanged.
+- Near 1: replace the memory with the new candidate.
+- Acts like the LSTM's forget and input gates combined.
+- Helps capture **long-term dependencies**.
+
+### 5.3 Candidate hidden state
+
+    h~(t) = tanh(W · [r(t) × h(t-1), x(t)] + b)
+
+The proposed new memory. The reset gate filters the past before it is mixed with the current input.
+
+### 5.4 Final hidden state
+
+    h(t) = (1 - z(t)) × h(t-1) + z(t) × h~(t)
+
+A weighted blend of old memory and new candidate. Some papers and libraries swap the roles of z and (1 - z), but the idea is identical.
+
+## 6. Step-by-step working of one GRU cell
+
+1. Combine h(t-1) and x(t).
+2. The **update gate** computes z(t).
+3. The **reset gate** computes r(t).
+4. Multiply r(t) with h(t-1) to filter the past.
+5. Build the **candidate** h~(t) from the filtered past and x(t) using tanh.
+6. Blend the old state and the candidate using z(t) to get h(t).
+7. h(t) is the output and is passed to the next time step.
+
+## 7. Why GRU handles vanishing gradients
+
+When the update gate z is close to 0, h(t) is almost equal to h(t-1). The old information is copied forward with little change, so gradients flow back through many time steps without shrinking. This is the same idea as the LSTM cell state highway.
+
+## 8. LSTM vs GRU
+
+| Feature | LSTM | GRU |
+|---|---|---|
+| Number of gates | 3 (forget, input, output) | 2 (reset, update) |
+| Separate cell state | Yes | No |
+| States passed forward | h(t) and C(t) | h(t) only |
+| Parameters | More (4 weight sets) | Fewer (3 weight sets, about 25% less) |
+| Training speed | Slower | Faster |
+| Memory usage | Higher | Lower |
+| Long sequences | Slightly better in some cases | Good, sometimes equal |
+| Small datasets | More prone to overfitting | Often better |
+| Introduced | 1997 (Hochreiter and Schmidhuber) | 2014 (Cho et al.) |
+
+## 9. RNN vs LSTM vs GRU
+
+| Model | Memory mechanism | Strength | Weakness |
+|---|---|---|---|
+| Simple RNN | Single hidden state, no gates | Simple, fast | Vanishing gradient, short memory |
+| LSTM | Cell state + 3 gates | Very good long-term memory | Heavy, slower |
+| GRU | Hidden state + 2 gates | Light, fast, good memory | Slightly less control than LSTM |
+
+## 10. Advantages and disadvantages of GRU
+
+**Advantages**
+- Fewer parameters and faster training than LSTM.
+- Needs less memory.
+- Works well on smaller datasets.
+- Performs comparably to LSTM on many tasks.
+
+**Disadvantages**
+- Less expressive than LSTM because there is no separate memory cell and no output gate.
+- Can perform slightly worse on tasks needing very precise long-term memory control.
+- Still processes data step by step, so it cannot be parallelised over time like Transformers.
+
+## 11. Applications
+
+- Machine translation and text generation
+- Sentiment analysis and text classification
+- Speech recognition
+- Time-series forecasting (stock, weather, sensor data)
+- Music generation
+- Anomaly detection
+
+## 12. When to choose which
+
+- **Choose GRU** when you have limited data or compute, want faster training, or need a good baseline quickly.
+- **Choose LSTM** when sequences are very long, the task needs fine control over memory, or you have plenty of data.
+- In practice, try both and compare validation results, because neither always wins.
+
+## 13. Summary
+
+- GRU is a gated RNN with an update gate and a reset gate, and no separate cell state.
+- It was created as a simpler, faster alternative to LSTM.
+- The reset gate decides how much past to use for new information.
+- The update gate decides how much old memory to keep versus replace.
+- It fixes the vanishing gradient problem like LSTM, with fewer parameters.
