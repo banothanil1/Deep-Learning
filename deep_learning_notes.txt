@@ -2470,3 +2470,103 @@ When the update gate z is close to 0, h(t) is almost equal to h(t-1). The old in
 - The reset gate decides how much past to use for new information.
 - The update gate decides how much old memory to keep versus replace.
 - It fixes the vanishing gradient problem like LSTM, with fewer parameters.
+
+"""
+=====================================================
+ RNN NOTES: TYPES AND BIDIRECTIONAL RNN
+=====================================================
+"""
+
+---------------------------------------------------
+1. WHAT IS AN RNN?
+---------------------------------------------------
+- Processes sequential data (text, time series, audio) step by step
+- Keeps a hidden state = memory of previous steps
+    h_t = f(W_h * h_{t-1} + W_x * x_t + b)
+    y_t = g(W_y * h_t)
+- Same weights shared across all time steps
+- Trained with Backpropagation Through Time (BPTT)
+- Problem: vanishing/exploding gradients -> poor long-term memory
+
+---------------------------------------------------
+2. TYPES OF RNN BY INPUT/OUTPUT STRUCTURE
+---------------------------------------------------
+One-to-One              : 1 input -> 1 output        (plain classification)
+One-to-Many             : 1 input -> sequence        (image captioning, music generation)
+Many-to-One             : sequence -> 1 output       (sentiment analysis, spam detection)
+Many-to-Many (same len) : sequence -> sequence       (POS tagging, NER)
+Many-to-Many (diff len) : encoder-decoder / seq2seq  (translation, summarization, chatbots)
+
+---------------------------------------------------
+3. TYPES OF RNN BY CELL / ARCHITECTURE
+---------------------------------------------------
+a) Vanilla RNN
+   - Single tanh layer, simple, short memory only
+
+b) LSTM (Long Short-Term Memory)
+   - Cell state + 3 gates: forget, input, output
+   - Solves long-term dependency problem
+   - Use: language modeling, speech, time series
+
+c) GRU (Gated Recurrent Unit)
+   - 2 gates: update, reset
+   - Fewer parameters, faster than LSTM, similar accuracy
+
+d) Stacked / Deep RNN
+   - Multiple recurrent layers; lower = simple patterns, higher = abstract
+
+e) Bidirectional RNN (see below)
+
+f) Seq2Seq + Attention
+   - Encoder -> context vector -> decoder
+   - Attention lets decoder look at all encoder states (led to Transformers)
+
+---------------------------------------------------
+4. BIDIRECTIONAL RNN (BiRNN)
+---------------------------------------------------
+Problem:
+  Normal RNN sees only PAST context.
+  "Teddy ___ was a great president" vs "Teddy bears are cute"
+  -> the word AFTER "Teddy" decides the meaning.
+
+Idea:
+  Two RNNs on the same sequence
+    Forward  RNN : left -> right (x1 ... xT)
+    Backward RNN : right -> left (xT ... x1)
+  Combine at each step (usually concatenate):
+    h_t = [ h_t_forward ; h_t_backward ]
+    y_t = g(W_y * h_t + b)
+
+Key points:
+  - Works with any cell: BiRNN, BiLSTM, BiGRU
+  - Output size per step = 2 x hidden units
+  - ~2x parameters and compute
+  - Every output sees the ENTIRE sequence
+
+Used in:
+  NER, POS tagging, sentiment/text classification, speech recognition,
+  handwriting recognition, protein/DNA analysis, encoders in early
+  seq2seq models (ELMo used BiLSTM)
+
+Limitations:
+  - Needs full sequence upfront (not for real-time prediction)
+  - Not for text generation / autoregressive forecasting
+  - Slower and heavier than unidirectional models
+
+---------------------------------------------------
+5. QUICK COMPARISON
+---------------------------------------------------
+Model        | Memory | Speed       | Future context | Best for
+-------------|--------|-------------|----------------|--------------------------
+Vanilla RNN  | Short  | Fast        | No             | Short, simple sequences
+LSTM         | Long   | Slower      | No             | Long dependencies
+GRU          | Long   | > LSTM      | No             | Small data, speed
+BiLSTM/BiGRU | Long   | Slowest     | YES            | Tagging, classification
+
+---------------------------------------------------
+7. ONE-LINE REVISION
+---------------------------------------------------
+RNN           = memory over sequences, weak on long-range dependencies
+LSTM/GRU      = gated RNNs that fix vanishing gradients
+Bidirectional = forward + backward pass, sees past and future (needs full sequence)
+Seq2Seq+Attn  = different-length input/output, bridge to Transformers
