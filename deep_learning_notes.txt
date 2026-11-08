@@ -2730,3 +2730,68 @@ Solution    : Attention -> Transformers
   - Both encoder and decoder process one step at a time
   - Cannot parallelize across time steps
   - Slow on long sequences and large datasets
+
+=====================================================
+ ATTENTION MECHANISM: NOTES WITH ARCHITECTURE
+=====================================================
+
+---------------------------------------------------
+1. WHY ATTENTION CAME
+---------------------------------------------------
+Problem with plain seq2seq:
+  - Whole input compressed into ONE fixed-size context vector
+  - Long sentences lose information
+  - Decoder cannot focus on the relevant input word
+
+Idea (Bahdanau et al., 2014/2015):
+  - Do NOT throw away encoder hidden states
+  - At EVERY decoder step, look back at ALL encoder states
+  - Give more weight to the most relevant ones
+
+Human analogy:
+  While translating a sentence, you glance back at the specific
+  source word you are translating, not at a memorized summary.
+
+---------------------------------------------------
+2. ARCHITECTURE
+---------------------------------------------------
+
+   ENCODER (BiLSTM / BiGRU)
+   x1      x2      x3      x4
+   |       |       |       |
+  [h1]    [h2]    [h3]    [h4]     <- ALL hidden states are kept
+    \      |       |      /
+     \     |       |     /
+      +----+-------+----+
+           |
+    ATTENTION LAYER  <---- decoder previous state s(t-1)
+      scores e(t,i)
+      softmax -> weights a(t,i)
+      context c(t) = sum( a(t,i) * h_i )
+           |
+           v
+   DECODER
+   [s(t-1)] + y(t-1) + c(t)  ->  [s(t)]  ->  y(t)
+
+Key difference from plain seq2seq:
+  Plain     : ONE context vector C for all decoder steps
+  Attention : a NEW context vector c(t) at EVERY decoder step
+
+
+9. LIMITATIONS
+---------------------------------------------------
+  - Extra computation: O(N x M) for input length N, output length M
+  - Encoder and decoder are still RNNs, so training is sequential
+  - Cannot parallelize across time steps
+  - Leads to -> Transformers: "Attention Is All You Need" (2017)
+    which removed RNNs and kept only attention
+
+---------------------------------------------------
+10. WHERE IT IS USED
+---------------------------------------------------
+  - Machine translation
+  - Text summarization
+  - Image captioning (attend to image regions)
+  - Speech recognition
+  - Question answering
+  - Transformers, BERT, GPT
