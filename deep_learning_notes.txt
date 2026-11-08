@@ -2795,3 +2795,5 @@ Key difference from plain seq2seq:
   - Speech recognition
   - Question answering
   - Transformers, BERT, GPT
+
+https://erdem.pl/2021/05/introduction-to-attention-mechanism refer this link for the proper attension mechanism. credit goes to krish again.
